@@ -371,15 +371,16 @@ class DetailedViewController {
 
     // Export assist logic
     initializeExportView() {
-        // For now, we'll use subreddits as the filterable "category"
+        // Read subreddits from the extension's local state/storage
         const subreddits = [...new Set(this.allPosts.map(p => p.subreddit))].sort();
         
-        // Let's create a simple multi-select for subreddits
+        // Create a dropdown filter similar to the main view's subreddit filter
         this.elements.exportFiltersContainer.innerHTML = `
             <div class="filter-group">
-                <label class="filter-label">Filter by Subreddits</label>
-                <select id="exportSubredditFilter" class="filter-select" multiple size="5">
-                    ${subreddits.map(sub => `<option value="${sub}">${sub}</option>`).join('')}
+                <label class="filter-label">Filter by Subreddit</label>
+                <select id="exportSubredditFilter" class="filter-select">
+                    <option value="">All Subreddits</option>
+                    ${subreddits.map(sub => `<option value="${sub}">r/${sub}</option>`).join('')}
                 </select>
             </div>
         `;
@@ -393,13 +394,14 @@ class DetailedViewController {
 
     applyExportFilters() {
         const exportSubredditFilter = document.getElementById('exportSubredditFilter');
-        const selectedSubreddits = exportSubredditFilter ? 
-            Array.from(exportSubredditFilter.selectedOptions).map(opt => opt.value) : [];
+        const selectedSubreddit = exportSubredditFilter ? exportSubredditFilter.value : '';
         
-        if (selectedSubreddits.length === 0) {
+        if (!selectedSubreddit) {
+            // Show all posts when no specific subreddit is selected
             this.filteredExportPosts = [...this.allPosts];
         } else {
-            this.filteredExportPosts = this.allPosts.filter(post => selectedSubreddits.includes(post.subreddit));
+            // Filter posts by the selected subreddit
+            this.filteredExportPosts = this.allPosts.filter(post => post.subreddit === selectedSubreddit);
         }
 
         this.renderExportPosts();
