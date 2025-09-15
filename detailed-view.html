@@ -26,6 +26,13 @@
 
     <div class="page-container">
         <aside class="sidebar">
+            <!-- START: NEW NAVIGATION SECTION -->
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" id="navSavedPosts">Your Saved Posts</a>
+                <a href="#" class="nav-link" id="navExportAssist">Export Assist</a>
+            </nav>
+            <!-- END: NEW NAVIGATION SECTION -->
+
             <div class="stats-section">
                 <h2>Statistics</h2>
                 <div class="stats-grid">
@@ -50,7 +57,9 @@
         </aside>
 
         <main class="main-content">
-            <div class="filters-section">
+            <!-- This is the existing view for saved posts -->
+            <div id="savedPostsView">
+                <div class="filters-section">
                 <div class="filters-grid">
                     <div class="filter-group select-all-group">
                         <input type="checkbox" id="selectAllCheckbox" class="post-select-checkbox">
@@ -125,6 +134,44 @@
                 <span id="pageInfo" class="page-info">Page 1 of 1</span>
                 <button id="nextPageBtn" class="page-btn">Next →</button>
             </div>
+        </div>
+
+        <!-- START: NEW EXPORT ASSIST VIEW -->
+        <div id="exportAssistView" style="display: none;">
+            <div class="content-header">
+                <h1>Export Assist</h1>
+            </div>
+
+            <div class="filters-section">
+                <div class="filters-grid" id="exportFilters">
+                    <!-- Advanced filters will be added here by JS -->
+                </div>
+            </div>
+            
+            <div class="content-header">
+                <div class="filter-group select-all-group">
+                    <input type="checkbox" id="exportSelectAllCheckbox" class="post-select-checkbox">
+                    <label for="exportSelectAllCheckbox" class="filter-label">Select All (Filtered)</label>
+                </div>
+                <div class="header-actions">
+                     <button id="exportBtn" class="action-btn primary">Export as JSON</button>
+                </div>
+            </div>
+
+            <div id="exportPostsContainer" class="posts-grid">
+                <div id="exportLoadingContainer" class="loading-container" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p>Loading posts...</p>
+                </div>
+                <!-- Filtered posts for export will be loaded here -->
+            </div>
+            
+            <div id="exportEmptyState" class="empty-state" style="display: none;">
+                <h2>No posts match your filters</h2>
+                <p>Try adjusting your filters to find posts to export.</p>
+            </div>
+        </div>
+        <!-- END: NEW EXPORT ASSIST VIEW -->
         </main>
     </div>
 

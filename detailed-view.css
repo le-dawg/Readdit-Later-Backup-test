@@ -397,3 +397,61 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Sidebar Navigation */
+        .sidebar-nav {
+            padding: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 1rem;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            color: #333;
+            border-radius: 6px;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background-color: #f0f0f0;
+        }
+
+        .nav-link.active {
+            background-color: #0079d3;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Export View Specific Styles */
+        #exportAssistView .action-btn.primary {
+            background-color: #28a745; /* A green color for the main action */
+            color: white;
+        }
+
+        #exportAssistView .action-btn.primary:hover {
+            background-color: #218838;
+        }
+
+        /* Styles for multi-select filters (we will use a library or custom component) */
+        .multi-select-filter {
+            position: relative;
+            width: 100%;
+        }
+
+        /* Additional styles for a clean layout in the export view */
+        #exportAssistView .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        #exportPostsContainer {
+            /* Ensure the container can scroll if many posts are shown */
+            max-height: 70vh;
+            overflow-y: auto;
+        }
