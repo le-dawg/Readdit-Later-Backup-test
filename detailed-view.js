@@ -20,6 +20,20 @@ class DetailedViewController {
 
     initializeElements() {
         this.elements = {
+            // Navigation
+            navSavedPosts: document.getElementById('navSavedPosts'),
+            navExportAssist: document.getElementById('navExportAssist'),
+            savedPostsView: document.getElementById('savedPostsView'),
+            exportAssistView: document.getElementById('exportAssistView'),
+
+            // Export elements
+            exportFiltersContainer: document.getElementById('exportFilters'),
+            exportSelectAllCheckbox: document.getElementById('exportSelectAllCheckbox'),
+            exportBtn: document.getElementById('exportBtn'),
+            exportPostsContainer: document.getElementById('exportPostsContainer'),
+            exportLoadingContainer: document.getElementById('exportLoadingContainer'),
+            exportEmptyState: document.getElementById('exportEmptyState'),
+
             // Stats
             totalPostsStat: document.getElementById('totalPostsStat'),
             weeklyPostsStat: document.getElementById('weeklyPostsStat'),
@@ -54,9 +68,30 @@ class DetailedViewController {
             refreshBtn: document.getElementById('refreshBtn'),
             logoutBtn: document.getElementById('logoutBtn')
         };
+        
+        // Initialize export-related data
+        this.filteredExportPosts = [];
     }
 
     bindEvents() {
+        // Navigation events
+        this.elements.navSavedPosts.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showView('savedPosts');
+        });
+
+        this.elements.navExportAssist.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showView('exportAssist');
+        });
+
+        // Export events
+        this.elements.exportSelectAllCheckbox.addEventListener('change', (e) => {
+            this.toggleExportSelectAll(e.target.checked);
+        });
+
+        this.elements.exportBtn.addEventListener('click', () => this.handleExport());
+
         // Filter events
         this.elements.searchInput.addEventListener('input', (e) => {
             this.debounce(() => {
@@ -243,7 +278,7 @@ class DetailedViewController {
         card.className = 'post-card';
 
         card.innerHTML = `
-            <input type="checkbox" class="post-select-checkbox" data-post-name="${post.name}">
+            <input type="checkbox" class="post-select-checkbox" data-post-name="${post.name}" data-post-id="${post.id}">
             <div class="post-content">
                 <a href="https://reddit.com${post.permalink}" class="post-title" target="_blank" title="${this.escapeHtml(post.title)}">${this.escapeHtml(post.title)}</a>
                 <div class="post-meta">
@@ -316,8 +351,144 @@ class DetailedViewController {
         }
     }
 
-    // Add other methods like updateStats, populateSubredditFilter, etc.
-    // Make sure to implement all the methods that were in the original file
+    // View switching logic
+    showView(viewName) {
+        this.elements.savedPostsView.style.display = 'none';
+        this.elements.exportAssistView.style.display = 'none';
+        this.elements.navSavedPosts.classList.remove('active');
+        this.elements.navExportAssist.classList.remove('active');
+
+        if (viewName === 'savedPosts') {
+            this.elements.savedPostsView.style.display = 'block';
+            this.elements.navSavedPosts.classList.add('active');
+        } else if (viewName === 'exportAssist') {
+            this.elements.exportAssistView.style.display = 'block';
+            this.elements.navExportAssist.classList.add('active');
+            // When switching to export view, initialize it
+            this.initializeExportView();
+        }
+    }
+
+    // Export assist logic
+    initializeExportView() {
+        // Read subreddits from the extension's local state/storage
+        const subreddits = [...new Set(this.allPosts.map(p => p.subreddit))].sort();
+        
+        // Create a dropdown filter similar to the main view's subreddit filter
+        this.elements.exportFiltersContainer.innerHTML = `
+            <div class="filter-group">
+                <label class="filter-label">Filter by Subreddit</label>
+                <select id="exportSubredditFilter" class="filter-select">
+                    <option value="">All Subreddits</option>
+                    ${subreddits.map(sub => `<option value="${sub}">r/${sub}</option>`).join('')}
+                </select>
+            </div>
+        `;
+
+        const exportSubredditFilter = document.getElementById('exportSubredditFilter');
+        exportSubredditFilter.addEventListener('change', () => this.applyExportFilters());
+        
+        // Initially, display all posts
+        this.applyExportFilters();
+    }
+
+    applyExportFilters() {
+        const exportSubredditFilter = document.getElementById('exportSubredditFilter');
+        const selectedSubreddit = exportSubredditFilter ? exportSubredditFilter.value : '';
+        
+        if (!selectedSubreddit) {
+            // Show all posts when no specific subreddit is selected
+            this.filteredExportPosts = [...this.allPosts];
+        } else {
+            // Filter posts by the selected subreddit
+            this.filteredExportPosts = this.allPosts.filter(post => post.subreddit === selectedSubreddit);
+        }
+
+        this.renderExportPosts();
+    }
+
+    renderExportPosts() {
+        this.elements.exportPostsContainer.innerHTML = '';
+        this.elements.exportEmptyState.style.display = this.filteredExportPosts.length === 0 ? 'block' : 'none';
+
+        if (this.filteredExportPosts.length > 0) {
+            // We reuse the existing createPostCard function
+            this.filteredExportPosts.forEach(post => {
+                const postElement = this.createPostCard(post);
+                this.elements.exportPostsContainer.appendChild(postElement);
+            });
+        }
+        
+        // Reset select all checkbox
+        this.elements.exportSelectAllCheckbox.checked = false;
+    }
+
+    toggleExportSelectAll(checked) {
+        const checkboxes = this.elements.exportPostsContainer.querySelectorAll('.post-select-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = checked;
+        });
+    }
+
+    handleExport() {
+        const selectedCheckboxes = this.elements.exportPostsContainer.querySelectorAll('.post-select-checkbox:checked');
+        const postIdsToExport = new Set(Array.from(selectedCheckboxes).map(cb => cb.dataset.postId));
+
+        if (postIdsToExport.size === 0) {
+            alert('Please select at least one post to export.');
+            return;
+        }
+
+        const postsToExport = this.allPosts.filter(post => postIdsToExport.has(post.id));
+
+        const exportData = postsToExport.map(post => {
+            const isComment = post.name.startsWith('t1_');
+            
+            // Construct the URL to the original post for comments
+            const originalPostUrl = isComment ? `https://www.reddit.com${post.permalink.substring(0, post.permalink.lastIndexOf('/', post.permalink.length - 2))}` : null;
+
+            return {
+                headline: post.title || null, // Comments don't have titles
+                content: isComment ? post.body_html : post.selftext_html,
+                subreddit: post.subreddit,
+                original_post_url: originalPostUrl,
+                // As discussed, tags are not yet implemented. We add an empty array.
+                tags: [], 
+                // Adding some other useful data
+                url: `https://www.reddit.com${post.permalink}`,
+                score: post.score,
+                created_utc: post.created_utc,
+                is_comment: isComment
+            };
+        });
+        
+        // Defensive check
+        if(exportData.length === 0) {
+            alert("An error occurred: No data to export.");
+            return;
+        }
+
+        this.downloadJson(exportData, `readdit-later-export-${new Date().toISOString().slice(0,10)}.json`);
+    }
+
+    downloadJson(data, filename) {
+        try {
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Failed to generate or download JSON file:", error);
+            alert("An error occurred while trying to export the data. Please check the console for details.");
+        }
+    }
 
     // --- Helper methods from original file ---
     debounce(func, delay) {
